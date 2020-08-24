@@ -706,6 +706,115 @@ app.get('/get_users', (req, res) => {
   
   });
 
-app.listen(8000, () => {
-  console.log('API Escuchando en el puerto 8000!')
+  //GET PRODUCT BY ID
+  app.get('/inventapp_get_prd', (req, res) => {
+
+    var code_product = req.query.p_id;
+
+    console.log(code_product);
+
+    var sql = require("mssql");
+  
+      // config for your database
+      var config = {
+          user: 'admin',
+          password: 'queremencuentle',
+          server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com', 
+          database: 'inventory_app',
+          port: 1433
+      };
+      
+      sql.close();
+  
+      // connect to your database
+      sql.connect(config, function (err) {
+      
+          if (err) console.log(err);
+  
+          // create Request object
+          var request = new sql.Request();
+             
+          var query = "select * from ca_products where code_product = " + code_product;
+
+          //console.log(query);
+
+          // query to the database and get the records
+          request.query(query, function (err, recordset) {
+              
+              if (err) console.log(err)
+
+              // send records as a response
+              sql.close();
+  
+              var myJsonString = JSON.stringify(recordset.recordset);
+             
+              res.status(200).send(myJsonString);
+              
+          });
+  
+      });
+  
+  });
+
+   //INSERT A NEW PRODUCT --> CHANGE TO POST METHOD
+   app.get('/inventapp_sv_prd', (req, res) => {
+
+    var code_product = req.query.p_id;
+    var name_product = req.query.p_nm;
+    var image_product = req.query.p_img;
+    //var status_product = req.query.p_sts;
+    var price_product = req.query.p_pr;
+
+    var sql = require("mssql");
+  
+      // config for your database
+      var config = {
+          user: 'admin',
+          password: 'queremencuentle',
+          server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com',
+          database: 'inventory_app',
+          port: 1433
+      };
+      
+      sql.close();
+  
+      // connect to your database
+      sql.connect(config, function (err) {
+      
+          if (err) console.log(err);
+  
+          // create Request object
+          var request = new sql.Request();
+             
+          var query = "INSERT INTO ca_products (code_product,name_product,image_path,status_product,price) \
+                       VALUES("+"'"+code_product+"'"+","
+                               +"'"+name_product+"'"+","
+                               +"'"+image_product+"'"+","
+                               +"1,"
+                               +price_product+")";
+
+          //console.log(query);
+
+          // query to the database and get the records
+          request.query(query, function (err, recordset) {
+              
+              if (err) console.log(err)
+
+              // send records as a response
+              sql.close();
+  
+              var myJsonString = JSON.stringify(recordset.recordset);
+             
+              res.status(200).send(myJsonString);
+              
+          });
+  
+      });
+  
+  });
+
+  var port = 8080;
+
+app.listen(port, () => {
+  console.log('API Escuchando en el puerto ' + port)
 });
