@@ -1,76 +1,272 @@
 var express = require('express');
+multer = require('multer'), // "multer": "^1.1.0"
+multerS3 = require('multer-s3'); //"^1.4.1"
+var mysql = require('mysql');
+var bodyParser = require('body-parser');
 var app = express();
+//app.use(express.urlencoded());
+app.use(express.json());
+
+app.use(bodyParser.urlencoded({ extended: false })); 
+
+//app.use(express.static('public'));
+//AWS CONSTANT
+/**/
+const AWS = require('aws-sdk');
+const s3 = new AWS.S3({
+  accessKeyId: 'AKIAVG2URPVSURFRO6UE',
+  secretAccessKey: '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'
+});
+
+
+var upload = multer({
+    storage: multerS3({
+        s3: s3,
+        bucket: 'corpolex-docs',
+        acl: 'public-read',
+        contentType: multerS3.AUTO_CONTENT_TYPE,
+        key: function (req, file, cb) {
+            console.log(file);
+            cb(null, file.originalname); 
+        }
+    })
+});
+
+var nodemailer = require('nodemailer');
+
+var transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'josego990@gmail.com',
+    pass: 'xxx'
+  }
+});
+
+var mailOptions = {
+  from: 'josego990@gmail.com',
+  to: 'yotiplagio@gmail.com',
+  subject: 'Sending Email using Node.js',
+  text: 'That was easy!'
+};
 
 app.use(function(req, res, next) {
-   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Credentials', true);
-  res.header('Access-Control-Allow-Methods', 'POST, GET','PUT','OPTIONS');
+  res.header('Access-Control-Allow-Origin', '*');
+  //res.header('Access-Control-Allow-Credentials', true);
+  //res.header('Access-Control-Allow-Methods', 'POST, GET','PUT','OPTIONS');
   res.header('Access-Control-Allow-Headers', '*');
   res.header('Content-Type','application/json');
   next();
 });
 
-app.get('/', (req, res) => {
-    
-   
-            res.status(200).send("HOLA AMIGOS"); 
+app.get('/send_mail', function (req, res) {
+    transporter.sendMail(mailOptions, function(error, info){
+        if (error) {
+          console.log(error);
+        } else {
+          console.log('Email sent: ' + info.response);
+          res.send("Uploaded!");
+        }
+      });
+});
+
+/* */
+app.get('/upload_form', function (req, res) {
+    res.sendFile(__dirname + '/index.html');
+});
+
+//used by upload form
+app.post('/upload', upload.array('upl',1), function (req, res, next) {
+
+    var value1 = req.query.param_one;
+
+    console.log(value1);
+
+    res.send("Uploaded!" + value1);
+});
+
+var urlencodedParser = bodyParser.urlencoded({extended: false});
+
+app.post('/upload_xxx', urlencodedParser, function (req, res) {
+
+    //ONLY WORK BY enctype="application/x-www-form-urlencoded" FORM
+
+    var value1 = req.query.param_one;
+
+    console.log(value1);
+
+    res.status(200).send(req.body);
+
+});
+
+function collectRequestData(request, callback) {
+    const FORM_URLENCODED = 'application/x-www-form-urlencoded';
+    if(true) {
+        let body = '';
+        request.on('data', chunk => {
+            body += chunk.toString();
+        });
+        request.on('end', () => {
+            callback(parse(body));
+        });
+    }
+    else {
+        callback(null);
+    }
+}
+
+//INICIAN METODOS DE INVENTORY//////////////////////////////////////////------------------------------
+app.get('/mysql', function (req, res) {
+  
+    var query = ' select * from ad_customer '
+
+    var con = mysql.createConnection({
+        host: "database-1.cridzebmfdot.us-east-1.rds.amazonaws.com",
+        user: "admin",
+        password: "queremencuentle",
+        database: "db_inventory",
+    });
+
+    con.connect((err) => {
+        if(err){
+          console.log('Error connecting to Db');
+          return;
+        }
+        console.log('Connection established');
+      });
+
+      con.query(query, (err,rows) => {
+        if(err) throw err;
+      
+        console.log('Data received from Db:');
+        console.log(rows);
+        var myObj = {};
+				
+        myObj.stuff = rows;
+        
+        res.send(myObj);
+    });
+
+    con.end((err) => {
+
+    console.log('Connection end.');
+
+});
+  
+
+});
+
+//GET PRODUCT BY ID
+  app.get('/inventapp_get_prd', (req, res) => {
+
+    var code_product = req.query.p_id;
+
+    console.log(code_product);
+
+    var sql = require("mssql");
+  
+      // config for your database
+      var config = {
+          user: 'admin',
+          password: 'queremencuentle',
+          server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com', 
+          database: 'inventory_app',
+          port: 1433
+      };
+      
+      sql.close();
+  
+      // connect to your database
+      sql.connect(config, function (err) {
+      
+          if (err) console.log(err);
+  
+          // create Request object
+          var request = new sql.Request();
+             
+          var query = "select * from ca_products where code_product = '" + code_product + "'";
+
+          //console.log(query);
+
+          // query to the database and get the records
+          request.query(query, function (err, recordset) {
+              
+              if (err) console.log(err)
+
+              // send records as a response
+              sql.close();
+  
+              var myJsonString = JSON.stringify(recordset.recordset);
+             
+              res.status(200).send(myJsonString);
+              
+          });
+  
+      });
   
   });
-
-app.get('/get_inventory', (req, res) => {
-
-  res.header('Content-Type','text/html');
-
-  var sql = require("mssql");
-
-  var usr_name = req.query.user_name;
-
-  console.log(usr_name);
-
-    // config for your database
-    var config = {
-        user: 'usrsmart',
-        password: 'D3s@rr0ll0',
-        server: '181.174.97.52', 
-        database: 'INVENTARIO_ECO',
-        port: 1433
-    };
-
-    // connect to your database
-    sql.connect(config, function (err) {
-    
-        if (err) console.log(err);
-
-        // create Request object
-        var request = new sql.Request();
-           
-        // query to the database and get the records
-        request.query('exec procGetDataInventory ' +  usr_name , function (err, recordset) {
-            
-            if (err) console.log(err)
-
-            // send records as a response
-            sql.close();
-
-            var myJsonString = JSON.stringify(recordset.recordset);
   
-            var name_machine = recordset.recordset.name_machine;
+  //INSERT A NEW PRODUCT --> CHANGE TO POST METHOD
+   app.get('/inventapp_sv_prd', (req, res) => {
 
-            //res.status(200).send(recordset.recordset[0].name_machine);
+    var code_product = req.query.p_id;
+    var name_product = req.query.p_nm;
+    var image_product = req.query.p_img;
+    //var status_product = req.query.p_sts;
+    var price_product = req.query.p_pr;
 
-            res.status(200).send('<!DOCTYPE html><head><style type="text/css">.animated { -webkit-animation-duration: 1s; animation-duration: 1s; -webkit-animation-fill-mode: both;  animation-fill-mode: both; } .animated.infinite { -webkit-animation-iteration-count: infinite; animation-iteration-count: infinite; } .animated.hinge { -webkit-animation-duration: 2s; animation-duration: 2s; } .animated.bounceIn, .animated.bounceOut { -webkit-animation-duration: .75s; animation-duration: .75s; } .animated.flipOutX, .animated.flipOutY { -webkit-animation-duration: .75s; animation-duration: .75s; } .col-md-offset-0 { margin-left: 0%; }  .col-md-offset-1 {  margin-left: 8.33333%;  }  .col-md-offset-2 { margin-left: 16.66667%; } .col-md-offset-3 {  margin-left: 25%; } .col-md-offset-4 {  margin-left: 33.33333%; } .col-md-offset-5 { margin-left: 41.66667%; } .col-md-offset-6 { margin-left: 50%; } .col-md-offset-7 { margin-left: 58.33333%; } .col-md-offset-8 { margin-left: 66.66667%; } .col-md-offset-9 { margin-left: 75%; } .col-md-offset-10 { margin-left: 83.33333%; } .col-md-offset-11 { margin-left: 91.66667%; } .col-md-offset-12 { margin-left: 100%; } body { font-family: "Roboto", Arial, sans-serif; font-weight: 300; font-size: 20px; line-height: 1.6; color: rgba(0, 0, 0, 0.5); } @media screen and (max-width: 992px) { body { font-size: 16px; } } h1 { color: #000; font-family: "Montserrat", Arial, sans-serif; font-weight: 700; margin: 0 0 30px 0; } #fh5co-main { width: 85%; float: right; -webkit-transition: 0.5s; -o-transition: 0.5s; transition: 0.5s; } @media screen and (max-width: 768px) { #fh5co-main { width: 100%; } } body.offcanvas { overflow-x: hidden; }</style><meta charset="utf-8"></head><body><div id="fh5co-page"><center><img src="https://ecotermo-images.s3.amazonaws.com/21.png"height="123px"></center><div id="fh5co-main"><div class="col-md-12 animate-box" data-animate-effect="fadeInLeft"></div><div class="col-md-8 col-md-offset-2 animate-box" data-animate-effect="fadeInLeft"><br><h1>'
-            + recordset.recordset[0].name_employee +
-            '</h1></br><br>Descripción del equipo: '    
-            + recordset.recordset[0].name_machine +
-            '<br>Descripcion CPU: '
-            + recordset.recordset[0].cpu_description +
-            '<br>Dirección de IP primaria: '
-            + recordset.recordset[0].primary_ip + '<br>Estado del hardware del equipo: Detección de hardware habilitada<br>Fabricante del dispositivo: Dell Inc.<br>Modelo del dispositivo: Latitude E5430 non-vPro<<br>Número de serie: F8TCMX1<br>Fabricante del GPU: GenuineIntel<br>Descripción CPU: Intel(R) Core(TM) i3-3110M CPU @ 2.40GHz<br>Cantidad de núcleos: 2<br>Velocidad del reloj [MHz]: 2400<br>Capacidad Ram (GB): 4<br>Grafica Ram (GB): 4<br>Capacidad HDR (GB): 1000</br></p></div></body></html>')
-            
-        });
-    });
+    var sql = require("mssql");
   
+      // config for your database
+      var config = {
+          user: 'admin',
+          password: 'queremencuentle',
+          server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com',
+          database: 'inventory_app',
+          port: 1433
+      };
+      
+      sql.close();
+  
+      // connect to your database
+      sql.connect(config, function (err) {
+      
+          if (err) console.log(err);
+  
+          // create Request object
+          var request = new sql.Request();
+             
+          var query = "INSERT INTO ca_products (code_product,name_product,image_path,status_product,price) \
+                       VALUES("+"'"+code_product+"'"+","
+                               +"'"+name_product+"'"+","
+                               +"'https://bucket-inventario.s3.amazonaws.com/"+image_product+"'"+","
+                               +"1,"
+                               +price_product+") select 'save success' [RESULT]";
 
+          console.log(query);
+
+          // query to the database and get the records
+          request.query(query, function (err, recordset) {
+              
+              if (err) console.log(err)
+
+              // send records as a response
+              sql.close();
+  
+              var myJsonString = JSON.stringify(recordset.recordset);
+             
+              res.status(200).send(myJsonString);
+              
+          });
+  
+      });
+  
+  });
+  
+//FINALIZAN METODOS DE INVENTORY----------------------------------------------------------------------
+
+
+app.get('/', (req, res) => {
+  res.send('El API está activo y respondiendo.')
 });
 
 app.get('/other', (req, res) => {
@@ -80,7 +276,6 @@ app.get('/other', (req, res) => {
 app.get('/get_videos', (req, res) => {
     
     var sql = require("mssql");
-
 
     // config for your database
     var config = {
@@ -409,9 +604,11 @@ sql.connect(config, function (err) {
         // send records as a response
         sql.close();
 
-        var myJsonString = JSON.stringify(recordset.recordset);
-
-        res.status(200).send(myJsonString); 
+          var myObj = {};
+				
+        myObj.stuff = recordset;
+        
+        res.send(myObj);
     });
 });
 });
@@ -705,116 +902,287 @@ app.get('/get_users', (req, res) => {
       });
   
   });
+////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////
+  //INICIAN SERVICIOS DE CORPOLEX
 
-  //GET PRODUCT BY ID
-  app.get('/inventapp_get_prd', (req, res) => {
 
-    var code_product = req.query.p_id;
-
-    console.log(code_product);
-
+  
+//exec procInsertDocumentUpload 2,'archivo-prueba','2020-06-06 00:00:00.000'
+  
+app.post('/corpolex-login', (req, res) => {
+    
     var sql = require("mssql");
   
       // config for your database
-      var config = {
-          user: 'admin',
-          password: 'queremencuentle',
-          server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com', 
-          database: 'inventory_app',
+      var config_sql = {
+          user: 'usrsmart',
+          password: 'D3s@rr0ll0',
+          server: '181.174.97.52',
+          database: 'CORPOLEX',
           port: 1433
       };
-      
+  
+      var user_mame = req.headers.u_s;
+      var user_pass = req.headers.p_a;
+  
       sql.close();
   
       // connect to your database
-      sql.connect(config, function (err) {
+      sql.connect(config_sql, function (err) {
       
           if (err) console.log(err);
   
-          // create Request object
           var request = new sql.Request();
              
-          var query = "select * from ca_products where code_product = " + code_product;
-
-          //console.log(query);
-
           // query to the database and get the records
-          request.query(query, function (err, recordset) {
+          request.query("exec procValidateUser " + "'" + user_mame + "'," + user_pass, function (err, recordset) {
               
-              if (err) console.log(err)
+              if (err) console.log(err);
 
-              // send records as a response
               sql.close();
   
               var myJsonString = JSON.stringify(recordset.recordset);
-             
-              res.status(200).send(myJsonString);
-              
+          
+              var string = myJsonString.toString();
+    
+              res.status(200).send(myJsonString); 
           });
-  
       });
-  
   });
 
-   //INSERT A NEW PRODUCT --> CHANGE TO POST METHOD
-   app.get('/inventapp_sv_prd', (req, res) => {
-
-    var code_product = req.query.p_id;
-    var name_product = req.query.p_nm;
-    var image_product = req.query.p_img;
-    //var status_product = req.query.p_sts;
-    var price_product = req.query.p_pr;
-
+  app.get('/corpolex_get_companies', (req, res) => {
+    
+    var id_company = req.headers.i_c;
     var sql = require("mssql");
-  
-      // config for your database
-      var config = {
-          user: 'admin',
-          password: 'queremencuentle',
-          server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com',
-          database: 'inventory_app',
-          port: 1433
-      };
-      
-      sql.close();
-  
-      // connect to your database
-      sql.connect(config, function (err) {
-      
-          if (err) console.log(err);
-  
-          // create Request object
-          var request = new sql.Request();
-             
-          var query = "INSERT INTO ca_products (code_product,name_product,image_path,status_product,price) \
-                       VALUES("+"'"+code_product+"'"+","
-                               +"'"+name_product+"'"+","
-                               +"'"+image_product+"'"+","
-                               +"1,"
-                               +price_product+")";
 
-          //console.log(query);
+    // config for your database
+    var config = {
+        user: 'usrsmart',
+        password: 'D3s@rr0ll0',
+        server: '181.174.97.52',
+        database: 'CORPOLEX',
+        port: 1433
+    };
 
-          // query to the database and get the records
-          request.query(query, function (err, recordset) {
-              
-              if (err) console.log(err)
+    sql.close();
 
-              // send records as a response
-              sql.close();
+    // connect to your database
+    sql.connect(config, function (err) {
+    
+        if (err) console.log(err);
+        // create Request object
+        var request = new sql.Request();
+           
+        // query to the database and get the records
+        request.query('exec procGetCompanies 1' , function (err, recordset) {
+            
+            if (err) console.log(err);
+
+            // send records as a response
+            sql.close();
+
+            var myJsonString = JSON.stringify(recordset.recordset);
+        
+            var string = myJsonString.toString();
   
-              var myJsonString = JSON.stringify(recordset.recordset);
-             
-              res.status(200).send(myJsonString);
-              
-          });
-  
-      });
-  
-  });
-
-  var port = 8080;
-
-app.listen(port, () => {
-  console.log('API Escuchando en el puerto ' + port)
+            res.status(200).send(myJsonString);
+        });
+    });
 });
+
+app.post('/corpolex-get_companies', (req, res) => {
+    
+    var id_company = req.headers.i_c;
+    var sql = require("mssql");
+
+    // config for your database
+    var config = {
+        user: 'usrsmart',
+        password: 'D3s@rr0ll0',
+        server: '181.174.97.52',
+        database: 'CORPOLEX',
+        port: 1433
+    };
+
+    sql.close();
+
+    // connect to your database
+    sql.connect(config, function (err) {
+    
+        if (err) console.log(err);
+        // create Request object
+        var request = new sql.Request();
+           
+        // query to the database and get the records
+        request.query('exec procGetCompanies ' + id_company , function (err, recordset) {
+            
+            if (err) console.log(err);
+
+            // send records as a response
+            sql.close();
+
+            var myJsonString = JSON.stringify(recordset.recordset);
+        
+            var string = myJsonString.toString();
+  
+            res.status(200).send(myJsonString);
+        });
+    });
+});
+
+app.post('/corpolex-get_files_by_company', (req, res) => {
+    
+    var id_company = req.headers.i_c;
+    var sql = require("mssql");
+
+    // config for your database
+    var config = {
+        user: 'usrsmart',
+        password: 'D3s@rr0ll0',
+        server: '181.174.97.52',
+        database: 'CORPOLEX',
+        port: 1433
+    };
+
+    sql.close();
+
+    // connect to your database
+    sql.connect(config, function (err) {
+    
+        if (err) console.log(err);
+        // create Request object
+        var request = new sql.Request();
+           
+        // query to the database and get the records
+        request.query('exec proGetDocumentsByCompany ' + id_company, function (err, recordset) {
+            
+            if (err) console.log(err);
+
+            // send records as a response
+            sql.close();
+
+            var myJsonString = JSON.stringify(recordset.recordset);
+
+  
+            res.status(200).send(myJsonString);
+        });
+    });
+});
+
+app.post('/corpolex-upload-file', upload.array('upl',1), function (req, res, next) {
+
+    var id_company = req.query.i_c;
+    var name_file = req.query.n_f;
+    var date_expired = req.query.d_e;
+
+    console.log(id_company+"-"+name_file+"-"+date_expired);
+
+    var sql = require("mssql");
+  
+      // config for your database
+      var config = {
+          user: 'usrsmart',
+          password: 'D3s@rr0ll0',
+          server: '181.174.97.52', 
+          database: 'CORPOLEX',
+          port: 1433
+      };
+
+      sql.close();
+  
+      // connect to your database
+      sql.connect(config, function (err) {
+      
+          if (err) console.log(err);
+  
+          // create Request object
+          var request = new sql.Request();
+        
+          var query = "exec procInsertDocumentUpload " + id_company + ",'" + name_file + "','" + date_expired + "'";
+
+          //console.log(query);
+
+          // query to the database and get the records
+          request.query(query, function (err, recordset) {
+              
+              if (err) console.log(err)
+  
+              // send records as a response
+              sql.close();
+  
+              var myJsonString = JSON.stringify(recordset.recordset);
+             
+              res.set('Content-Type', 'text/html');
+
+              res.status(200).send('<input type="button" value="EL ARCHIVO SE CARGO CORRECTAMENTE" onclick=" window.location.replace("http://corpolex-page.s3-website-us-east-1.amazonaws.com/");>');
+              
+          });
+  
+      });
+
+
+   
+});
+
+app.post('/corpolex_new_company', (req, res) => {
+    
+    var sql = require("mssql");
+  
+      // config for your database
+      var config = {
+          user: 'usrsmart',
+          password: 'D3s@rr0ll0',
+          server: '181.174.97.52', 
+          database: 'SMART_AXS',
+          port: 1433
+      };
+  
+      var id_country = req.headers.i_c;
+      var name_company = req.headers.n_c;
+      var address_company = req.headers.a_c;
+      var telephone1_company = req.headers.t1_c;
+      var telephone2_company = req.headers.t2_c;
+      var email_company = req.headers.e_c;
+      var location_company = req.headers.l_c
+      var status_company = req.headers.s_c;
+      
+      sql.close();
+  
+      // connect to your database
+      sql.connect(config, function (err) {
+      
+          if (err) console.log(err);
+  
+          // create Request object
+          var request = new sql.Request();
+        
+          var query = "exec procInsertCompany " + id_country + ",'" + name_company + "','" + address_company + "','" + location_company + "','"
+          + telephone1_company + "','" + telephone2_company + "','" + email_company + "'";
+
+          //console.log(query);
+
+          // query to the database and get the records
+          request.query(query, function (err, recordset) {
+              
+              if (err) console.log(err)
+  
+              // send records as a response
+              sql.close();
+  
+              var myJsonString = JSON.stringify(recordset.recordset);
+             
+              res.status(200).send(myJsonString);
+              
+          });
+  
+      });
+  
+  });
+
+//FINALIZAN SERVICIOS DE CORPOLEX
+//////////////////////////////////////////////////////////////////////////////////
+app.listen(8080, () => {
+  console.log('API Escuchando en el puerto 8080!')
+});
+
