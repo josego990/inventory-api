@@ -213,6 +213,7 @@ app.get('/mysql', function (req, res) {
     var image_product = req.query.p_img;
     //var status_product = req.query.p_sts;
     var price_product = req.query.p_pr;
+    var quiantity_product = req.query.p_q;
 
     var sql = require("mssql");
   
@@ -224,14 +225,11 @@ app.get('/mysql', function (req, res) {
           database: 'inventory_app',
           port: 1433
       };
-      
       sql.close();
-  
       // connect to your database
       sql.connect(config, function (err) {
       
           if (err) console.log(err);
-  
           // create Request object
           var request = new sql.Request();
              
@@ -240,7 +238,10 @@ app.get('/mysql', function (req, res) {
                                +"'"+name_product+"'"+","
                                +"'https://bucket-inventario.s3.amazonaws.com/"+image_product+"'"+","
                                +"1,"
-                               +price_product+") select 'save success' [RESULT]";
+                               +price_product+")\
+                        INSERT INTO ad_local (id_product,price,quantity)\
+                        VALUES(SCOPE_IDENTITY(),"+price_product+")\
+                               select 'save success' [RESULT]";
 
           console.log(query);
 
@@ -249,6 +250,58 @@ app.get('/mysql', function (req, res) {
               
               if (err) console.log(err)
 
+              // send records as a response
+              sql.close();
+  
+              var myJsonString = JSON.stringify(recordset.recordset);
+             
+              res.status(200).send(myJsonString);
+              
+          });
+  
+      });
+  
+  });
+
+  //USER
+  app.get('/inventapp_sv_usr', (req, res) => {
+
+    var name_user = req.query.n_u;
+    var address_user = req.query.a_u;
+    var mail_user = req.query.m_u;
+    var phone = req.query.p_u;
+    var sec_key = req.query.s_k_u;
+    var pic_path = req.query.p_p_u;
+
+    var sql = require("mssql");
+      // config for your database
+      var config = {
+          user: 'admin',
+          password: 'queremencuentle',
+          server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com',
+          database: 'inventory_app',
+          port: 1433
+      };
+      sql.close();
+  
+      sql.connect(config, function (err) {
+      
+          if (err) console.log(err);
+         
+          var request = new sql.Request();
+          
+          var query = "INSERT INTO ad_user(name_contact,address_contact,phone,secret_key,mail,picture_path)\
+                       VALUES("+"'"+name_user+"',"
+                               +"'"+address_user+"',"
+                               +phone+","
+                               +"'"+sec_key+"',"
+                               +"'"+mail_user+"',"
+                               +"'https://bucket-inventario.s3.amazonaws.com/"+"generic_pic"+"')\
+                               select 'SUCCESS' [RESULT]";
+
+          request.query(query, function (err, recordset) {
+              
+              if (err) console.log(err)
               // send records as a response
               sql.close();
   
@@ -1144,7 +1197,7 @@ app.post('/corpolex_new_company', (req, res) => {
       var telephone1_company = req.headers.t1_c;
       var telephone2_company = req.headers.t2_c;
       var email_company = req.headers.e_c;
-      var location_company = req.headers.l_c
+      var location_company = req.headers.l_c;
       var status_company = req.headers.s_c;
       
       sql.close();
@@ -1185,4 +1238,3 @@ app.post('/corpolex_new_company', (req, res) => {
 app.listen(8080, () => {
   console.log('API Escuchando en el puerto 8080!')
 });
-
