@@ -302,6 +302,7 @@ app.get('/mysql', function (req, res) {
           request.query(query, function (err, recordset) {
               
               if (err) console.log(err)
+
               // send records as a response
               sql.close();
   
@@ -315,6 +316,103 @@ app.get('/mysql', function (req, res) {
   
   });
   
+
+  //LOCAL
+  app.get('/inventapp_sv_local', (req, res) => {
+
+    var name_user = req.query.n_l;
+    var address_user = req.query.a_u;
+    var mail_user = req.query.m_u;
+    var phone = req.query.p_u;
+    var sec_key = req.query.s_k_u;
+    var pic_path = req.query.p_p_u;
+
+    var sql = require("mssql");
+      // config for your database
+      var config = {
+          user: 'admin',
+          password: 'queremencuentle',
+          server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com',
+          database: 'inventory_app',
+          port: 1433
+      };
+
+      sql.close();
+  
+      sql.connect(config, function (err) {
+      
+          if (err) console.log(err);
+         
+          var request = new sql.Request();
+          
+          var query = "INSERT INTO ad_user(name_contact,address_contact,phone,secret_key,mail,picture_path)\
+                       VALUES("+"'"+name_user+"',"
+                               +"'"+address_user+"',"
+                               +phone+","
+                               +"'"+sec_key+"',"
+                               +"'"+mail_user+"',"
+                               +"'https://bucket-inventario.s3.amazonaws.com/"+"generic_pic"+"')\
+                               select 'SUCCESS' [RESULT]";
+
+          request.query(query, function (err, recordset) {
+              
+              if (err) console.log(err)
+
+              // send records as a response
+              sql.close();
+  
+              var myJsonString = JSON.stringify(recordset.recordset);
+             
+              res.status(200).send(myJsonString);
+              
+          });
+  
+      });
+  
+  });
+  
+    //LOCAL
+    app.get('/inventapp_get_user_by_secret', (req, res) => {
+
+        var secret_key = req.query.s_k;
+
+        var sql = require("mssql");
+            // config for your database
+            var config = {
+                user: 'admin',
+                password: 'queremencuentle',
+                server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com',
+                database: 'inventory_app',
+                port: 1433
+            };
+
+            sql.close();
+        
+            sql.connect(config, function (err) {
+            
+                if (err) console.log(err);
+                
+                var request = new sql.Request();
+                
+                var query = "SELECT * FROM AD_USER where secret_key = "+"'"+secret_key+"'";
+
+                request.query(query, function (err, recordset) {
+                    
+                    if (err) console.log(err)
+
+                    // send records as a response
+                    sql.close();
+        
+                    var myJsonString = JSON.stringify(recordset.recordset);
+                    
+                    res.status(200).send(myJsonString);
+                    
+                });
+        
+            });
+        
+        });
+
 //FINALIZAN METODOS DE INVENTORY----------------------------------------------------------------------
 
 
