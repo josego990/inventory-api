@@ -213,7 +213,8 @@ app.get('/mysql', function (req, res) {
     var image_product = req.query.p_img;
     //var status_product = req.query.p_sts;
     var price_product = req.query.p_pr;
-    var quiantity_product = req.query.p_q;
+    var quantity_product = req.query.p_q;
+    var localId = req.query.l_i;
 
     var sql = require("mssql");
   
@@ -232,16 +233,18 @@ app.get('/mysql', function (req, res) {
           if (err) console.log(err);
           // create Request object
           var request = new sql.Request();
-             
+            
           var query = "INSERT INTO ca_products (code_product,name_product,image_path,status_product,price) \
                        VALUES("+"'"+code_product+"'"+","
                                +"'"+name_product+"'"+","
                                +"'https://bucket-inventario.s3.amazonaws.com/"+image_product+"'"+","
                                +"1,"
                                +price_product+")\
-                        INSERT INTO ad_local (id_product,price,quantity)\
-                        VALUES(SCOPE_IDENTITY(),"+price_product+")\
-                               select 'save success' [RESULT]";
+                       INSERT INTO ad_local_products (id_local,id_product,price,quantity)\
+                       VALUES("+ localId +", SCOPE_IDENTITY(),"
+                                +price_product+","
+                                +quantity_product+")\
+                               select 'SUCCESS' [RESULT]";
 
           console.log(query);
 
@@ -297,7 +300,7 @@ app.get('/mysql', function (req, res) {
                                +"'"+sec_key+"',"
                                +"'"+mail_user+"',"
                                +"'https://bucket-inventario.s3.amazonaws.com/"+"generic_pic"+"')\
-                               select 'SUCCESS' [RESULT]";
+                               select 'SUCCESS' [RESULT], SCOPE_IDENTITY() [ID_INSERT]";
 
           request.query(query, function (err, recordset) {
               
@@ -316,9 +319,58 @@ app.get('/mysql', function (req, res) {
   
   });
   
-
   //LOCAL
   app.get('/inventapp_sv_local', (req, res) => {
+
+    var user_id = req.query.u_i;
+    var local_name = req.query.l_n;
+    var local_address = req.query.l_a;
+    var local_secret_key = req.query.s_k_l;
+
+    var sql = require("mssql");
+      // config for your database
+      var config = {
+          user: 'admin',
+          password: 'queremencuentle',
+          server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com',
+          database: 'inventory_app',
+          port: 1433
+      };
+
+      sql.close();
+  
+      sql.connect(config, function (err) {
+      
+          if (err) console.log(err);
+         
+          var request = new sql.Request();
+          
+          var query = "INSERT INTO ad_local(id_user,name_local,secret_local_key,address_local)\
+                       VALUES("+user_id+","
+                               +"'"+local_name+"',"
+                               +"'"+local_secret_key+"',"
+                               +"'"+local_address+"')\
+                               select 'SUCCESS' [RESULT], SCOPE_IDENTITY() [ID_INSERT]";
+
+          request.query(query, function (err, recordset) {
+              
+              if (err) console.log(err)
+
+              // send records as a response
+              sql.close();
+  
+              var myJsonString = JSON.stringify(recordset.recordset);
+             
+              res.status(200).send(myJsonString);
+              
+          });
+  
+      });
+  
+  });
+  
+ //LOCAL
+ app.get('/inventapp_get_local_by_secret', (req, res) => {
 
     var name_user = req.query.n_l;
     var address_user = req.query.a_u;
@@ -370,7 +422,7 @@ app.get('/mysql', function (req, res) {
       });
   
   });
-  
+
     //LOCAL
     app.get('/inventapp_get_user_by_secret', (req, res) => {
 
@@ -417,7 +469,7 @@ app.get('/mysql', function (req, res) {
 
 
 app.get('/', (req, res) => {
-  res.send('El API está activo y respondiendo.')
+  res.send('El API está activo y respondiendo v07092020.')
 });
 
 app.get('/other', (req, res) => {
