@@ -205,8 +205,71 @@ app.get('/mysql', function (req, res) {
   
   });
   
-  //INSERT A NEW PRODUCT --> CHANGE TO POST METHOD
-   app.get('/inventapp_sv_prd', (req, res) => {
+//GET PRODUCT EXISTENCE ON LOCAL BY CODE ..FULL QUERY
+app.get('/inventapp_get_prd_v2', (req, res) => {
+
+    var code_product = req.query.p_id;
+    var local_id = req.query.l_i;
+
+    console.log(code_product);
+
+    var sql = require("mssql");
+  
+      // config for your database
+      var config = {
+          user: 'admin',
+          password: 'queremencuentle',
+          server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com', 
+          database: 'inventory_app',
+          port: 1433
+      };
+      
+      sql.close();
+  
+      // connect to your database
+      sql.connect(config, function (err) {
+      
+          if (err) console.log(err);
+  
+          // create Request object
+          var request = new sql.Request();
+             
+          var query = "select p.id_product,p.code_product,p.name_product,p.image_path,pl.price,pl.quantity,count(pl.id)[EXIST]\
+          from\
+              (select p.* from ca_products p\
+               where p.code_product = '"+code_product+"')p\
+          left join\
+              (select lp.* from ad_local_products lp\
+               where lp.id_local = "+local_id+")pl\
+          on pl.id_product = p.id_product\
+          group by p.id_product,p.code_product,p.name_product,p.image_path,pl.price,pl.quantity";
+
+          //END QUERY
+
+          console.log(query);
+
+          // query to the database and get the records
+          request.query(query, function (err, recordset) {
+              
+              if (err) console.log(err)
+
+              // send records as a response
+              sql.close();
+  
+              var myJsonString = JSON.stringify(recordset.recordset);
+             
+              console.log(myJsonString);
+
+              res.status(200).send(myJsonString);
+              
+          });
+  
+      });
+  
+  });
+
+  //INSERT A NEW PRODUCT IN DB --> CHANGE TO POST METHOD
+    app.get('/inventapp_sv_prd', (req, res) => {
 
     var code_product = req.query.p_id;
     var name_product = req.query.p_nm;
@@ -242,6 +305,58 @@ app.get('/mysql', function (req, res) {
                                +price_product+")\
                        INSERT INTO ad_local_products (id_local,id_product,price,quantity)\
                        VALUES("+ localId +", SCOPE_IDENTITY(),"
+                                +price_product+","
+                                +quantity_product+")\
+                               select 'SUCCESS' [RESULT]";
+
+          console.log(query);
+
+          // query to the database and get the records
+          request.query(query, function (err, recordset) {
+              
+              if (err) console.log(err)
+
+              // send records as a response
+              sql.close();
+  
+              var myJsonString = JSON.stringify(recordset.recordset);
+             
+              res.status(200).send(myJsonString);
+              
+          });
+  
+      });
+  
+  });
+
+  app.get('/inventapp_sv_prd_local', (req, res) => {
+    
+    var product_id = req.query.p_i;
+    var price_product = req.query.p_pr;
+    var quantity_product = req.query.p_q;
+    var localId = req.query.l_i;
+
+    var sql = require("mssql");
+  
+      // config for your database
+      var config = {
+          user: 'admin',
+          password: 'queremencuentle',
+          server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com',
+          database: 'inventory_app',
+          port: 1433
+      };
+      sql.close();
+      // connect to your database
+      sql.connect(config, function (err) {
+      
+          if (err) console.log(err);
+          // create Request object
+          var request = new sql.Request();
+            
+          var query = "INSERT INTO ad_local_products (id_local,id_product,price,quantity)\
+                       VALUES("+ localId + ","
+                                +product_id+","
                                 +price_product+","
                                 +quantity_product+")\
                                select 'SUCCESS' [RESULT]";
