@@ -234,7 +234,7 @@ app.get('/inventapp_get_prd_v2', (req, res) => {
           // create Request object
           var request = new sql.Request();
              
-          var query = "select p.id_product,p.code_product,p.name_product,p.image_path,pl.price,pl.quantity,count(pl.id)[EXIST]\
+          var query = "select p.id_product,p.code_product,p.name_product,p.image_path,isnull(pl.price,0.0)[price],isnull(pl.quantity,0)[quantity],count(pl.id)[EXIST]\
           from\
               (select p.* from ca_products p\
                where p.code_product = '"+code_product+"')p\
@@ -381,6 +381,72 @@ app.get('/inventapp_get_prd_v2', (req, res) => {
   
   });
 
+  app.get('/inventapp_upd_prd_local', (req, res) => {
+    
+    var product_id = req.query.p_i;
+    var price_product = req.query.p_pr;
+    var quantity_product = req.query.p_q;
+    var local_id = req.query.l_i;
+
+    var sql = require("mssql");
+  
+      // config for your database
+      var config = {
+          user: 'admin',
+          password: 'queremencuentle',
+          server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com',
+          database: 'inventory_app',
+          port: 1433
+      };
+
+      sql.close();
+      // connect to your database
+      sql.connect(config, function (err) {
+      
+        if (err) console.log(err);
+
+        var request = new sql.Request();
+        
+        var query_select = "select p.quantity\
+                            from ad_local_products p\
+                            where id_local = " + local_id +"\
+                            and id_product = " + product_id ;
+
+        request.query(query_select, function (err, recordset) {
+            
+            if (err) console.log(err)
+            
+            var quanti = parseInt(recordset.recordsets[0][0].quantity);
+            
+            quanti = quanti + parseInt(quantity_product);
+
+            var query = "UPDATE ad_local_products\
+            SET quantity = "+quanti+",\
+                price = "+price_product+"\
+            WHERE id_local = "+local_id+"\
+            AND id_product = "+product_id+"\
+            SELECT 'SUCCESS' [RESULT]";
+             
+            console.log(query);
+    
+            request.query(query, function (err, recordset) {
+    
+                if (err) console.log(err)
+    
+                var myJsonString = JSON.stringify(recordset.recordset);
+                
+                console.log(myJsonString);
+    
+                res.status(200).send(myJsonString);
+            
+            });
+
+        });
+  
+      });
+  
+  });
+
   //USER
   app.get('/inventapp_sv_usr', (req, res) => {
 
@@ -485,7 +551,7 @@ app.get('/inventapp_get_prd_v2', (req, res) => {
   });
   
  //LOCAL
- app.get('/inventapp_get_local_by_secret', (req, res) => {
+    app.get('/inventapp_get_local_by_secret', (req, res) => {
 
     var name_user = req.query.n_l;
     var address_user = req.query.a_u;
@@ -495,93 +561,92 @@ app.get('/inventapp_get_prd_v2', (req, res) => {
     var pic_path = req.query.p_p_u;
 
     var sql = require("mssql");
-      // config for your database
-      var config = {
-          user: 'admin',
-          password: 'queremencuentle',
-          server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com',
-          database: 'inventory_app',
-          port: 1433
-      };
+        // config for your database
+        var config = {
+            user: 'admin',
+            password: 'queremencuentle',
+            server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com',
+            database: 'inventory_app',
+            port: 1433
+        };
 
-      sql.close();
-  
-      sql.connect(config, function (err) {
-      
-          if (err) console.log(err);
-         
-          var request = new sql.Request();
-          
-          var query = "INSERT INTO ad_user(name_contact,address_contact,phone,secret_key,mail,picture_path)\
-                       VALUES("+"'"+name_user+"',"
-                               +"'"+address_user+"',"
-                               +phone+","
-                               +"'"+sec_key+"',"
-                               +"'"+mail_user+"',"
-                               +"'https://bucket-inventario.s3.amazonaws.com/"+"generic_pic"+"')\
-                               select 'SUCCESS' [RESULT]";
+        sql.close();
 
-          request.query(query, function (err, recordset) {
-              
-              if (err) console.log(err)
+        sql.connect(config, function (err) {
+        
+            if (err) console.log(err);
+            
+            var request = new sql.Request();
+            
+            var query = "INSERT INTO ad_user(name_contact,address_contact,phone,secret_key,mail,picture_path)\
+                        VALUES("+"'"+name_user+"',"
+                                +"'"+address_user+"',"
+                                +phone+","
+                                +"'"+sec_key+"',"
+                                +"'"+mail_user+"',"
+                                +"'https://bucket-inventario.s3.amazonaws.com/"+"generic_pic"+"')\
+                                select 'SUCCESS' [RESULT]";
 
-              // send records as a response
-              sql.close();
-  
-              var myJsonString = JSON.stringify(recordset.recordset);
-             
-              res.status(200).send(myJsonString);
-              
-          });
-  
-      });
-  
-  });
+            request.query(query, function (err, recordset) {
+                
+                if (err) console.log(err)
+
+                // send records as a response
+                sql.close();
+
+                var myJsonString = JSON.stringify(recordset.recordset);
+                
+                res.status(200).send(myJsonString);
+                
+            });
+
+        });
+
+    });
 
     //LOCAL
     app.get('/inventapp_get_user_by_secret', (req, res) => {
 
-        var secret_key = req.query.s_k;
+    var secret_key = req.query.s_k;
 
-        var sql = require("mssql");
-            // config for your database
-            var config = {
-                user: 'admin',
-                password: 'queremencuentle',
-                server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com',
-                database: 'inventory_app',
-                port: 1433
-            };
+    var sql = require("mssql");
+        // config for your database
+        var config = {
+            user: 'admin',
+            password: 'queremencuentle',
+            server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com',
+            database: 'inventory_app',
+            port: 1433
+        };
 
-            sql.close();
+        sql.close();
+
+        sql.connect(config, function (err) {
         
-            sql.connect(config, function (err) {
+            if (err) console.log(err);
             
-                if (err) console.log(err);
-                
-                var request = new sql.Request();
-                
-                var query = "SELECT * FROM AD_USER where secret_key = "+"'"+secret_key+"'";
+            var request = new sql.Request();
+            
+            var query = "SELECT * FROM AD_USER where secret_key = "+"'"+secret_key+"'";
 
-                request.query(query, function (err, recordset) {
-                    
-                    if (err) console.log(err)
+            request.query(query, function (err, recordset) {
+                
+                if (err) console.log(err)
 
-                    // send records as a response
-                    sql.close();
-        
-                    var myJsonString = JSON.stringify(recordset.recordset);
-                    
-                    res.status(200).send(myJsonString);
-                    
-                });
-        
+                // send records as a response
+                sql.close();
+
+                var myJsonString = JSON.stringify(recordset.recordset);
+                
+                res.status(200).send(myJsonString);
+                
             });
-        
+
         });
 
-//FINALIZAN METODOS DE INVENTORY----------------------------------------------------------------------
+    });
 
+//FINALIZAN METODOS DE INVENTORY----------------------------------------------------------------------
 
 app.get('/', (req, res) => {
   res.send('El API está activo y respondiendo v07092020.')
