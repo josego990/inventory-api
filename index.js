@@ -58,6 +58,10 @@ app.use(function(req, res, next) {
   next();
 });
 
+app.get('/', (req, res) => {
+    res.send('El API está activo y respondiendo v14092020.')
+  });
+
 app.get('/send_mail', function (req, res) {
     transporter.sendMail(mailOptions, function(error, info){
         if (error) {
@@ -269,7 +273,7 @@ app.get('/inventapp_get_prd_v2', (req, res) => {
   });
 
   //INSERT A NEW PRODUCT IN DB --> CHANGE TO POST METHOD
-    app.get('/inventapp_sv_prd', (req, res) => {
+ app.get('/inventapp_sv_prd', (req, res) => {
 
     var code_product = req.query.p_id;
     var name_product = req.query.p_nm;
@@ -326,6 +330,18 @@ app.get('/inventapp_get_prd_v2', (req, res) => {
           });
   
       });
+  
+  });
+
+  //INSERT A BATCH PRODUCT 
+  app.post('/inventapp_insert_product_batch', (req, res) => {
+
+    var body = req.body;
+
+    console.log(body);
+    console.log(body.length);
+    
+    res.send(body);
   
   });
 
@@ -648,9 +664,7 @@ app.get('/inventapp_get_prd_v2', (req, res) => {
 
 //FINALIZAN METODOS DE INVENTORY----------------------------------------------------------------------
 
-app.get('/', (req, res) => {
-  res.send('El API está activo y respondiendo v07092020.')
-});
+
 
 app.get('/other', (req, res) => {
     res.send('Hello Other World!')
