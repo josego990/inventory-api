@@ -461,17 +461,70 @@ request.query(query, function (err, recordset) {
 app.post('/inventapp_save_sale', (req, res) => {
 
     var body = req.body;
-    console.log(body);
+    var products_list = body.products;
+    console.log(body.products);
     
-    //SALE VARIABLES
-    
-    //do..
-    
+    var sql = require("mssql");
+    // config for your database
+    var config = {
+    user: 'admin',
+    password: 'queremencuentle',
+    server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com',
+    database: 'inventory_app',
+    port: 1433
+    };
 
-    res.status(200).send(body);
+    sql.close();
+
+    sql.connect(config, function (err) {
+
+        if (err) console.log(err);
+
+        var request = new sql.Request();
+
+        var query = "INSERT INTO ad_sale_header (local_id,total_articles,total_sale,date_sale)\
+                    VALUES("+body.local_id+","
+                            +body.total_articles+","
+                            +body.total_sale
+                            +",dateadd(hh,-6,getdate()))"
+                            
+        var subquery = "";
+
+        products_list.forEach(prod => {
+            
+            subquery = subquery + " INSERT INTO ad_sale_detail (id_header,id_product,quantity,unit_price,total) " 
+                       +"VALUES (SCOPE_IDENTITY()," 
+                       + prod.product_id + "," 
+                       + prod.quantity_in_sale + ","
+                       + prod.product_price + ","
+                       + "100.00)"
+
+        });
+
+        query = query + subquery + " select 'SUCCESS' [RESULT]";
+
+        console.log(query);
+
+        request.query(query, function (err, recordset) {
         
+            if (err) console.log(err)
+        
+            // send records as a response
+            sql.close();
+        
+            var myJsonString = JSON.stringify(recordset);
+            
+            console.log(recordset.recordset[0]);
+
+            res.status(200).send(myJsonString);
+            
+        });
+
+    });
+
+
 });
-    
+
 
 //LOCAL
 app.get('/inventapp_get_local_by_secret', (req, res) => {
