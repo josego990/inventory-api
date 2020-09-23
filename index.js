@@ -51,52 +51,48 @@ console.log('Connection end.');
 });
 
 //GET PRODUCT BY ID
-app.get('/inventapp_get_prd', (req, res) => {
+app.get('/inventapp_get_prds', (req, res) => {
 
-var code_product = req.query.p_id;
+    var local_id = req.query.l_i;
 
-console.log(code_product);
+    console.log(local_id);
 
-var sql = require("mssql");
+    var sql = require("mssql");
 
-// config for your database
-var config = {
-user: 'admin',
-password: 'queremencuentle',
-server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com', 
-database: 'inventory_app',
-port: 1433
-};
+    // config for your database
+    var config = {
+        user: 'admin',
+        password: 'queremencuentle',
+        server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com', 
+        database: 'inventory_app',
+        port: 1433
+    };
 
-sql.close();
-
-// connect to your database
-sql.connect(config, function (err) {
-
-if (err) console.log(err);
-
-// create Request object
-var request = new sql.Request();
-    
-var query = "select * from ca_products where code_product = '" + code_product + "'";
-
-//console.log(query);
-
-// query to the database and get the records
-request.query(query, function (err, recordset) {
-    
-    if (err) console.log(err)
-
-    // send records as a response
     sql.close();
 
-    var myJsonString = JSON.stringify(recordset.recordset);
-    
-    res.status(200).send(myJsonString);
-    
-});
+    sql.connect(config, function (err) {
 
-});
+        if (err) console.log(err);
+
+        var request = new sql.Request();
+            
+        var query = "select * from ca_products";
+
+        request.query(query, function (err, recordset) {
+            
+            if (err) console.log(err)
+
+            sql.close();
+
+            var myJsonString = JSON.stringify(recordset.recordset);
+            
+            console.log(recordset.recordset);
+
+            res.status(200).send(myJsonString);
+            
+        });
+
+    });
 
 });
 
