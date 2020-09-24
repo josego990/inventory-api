@@ -485,19 +485,26 @@ app.post('/inventapp_save_sale', (req, res) => {
                             +",dateadd(hh,-6,getdate()))"
                             
         var subquery = "";
+        var query_downgrade_products = "";
 
         products_list.forEach(prod => {
             
+            var total_items_price = prod.quantity_in_sale * prod.product_price;
+
             subquery = subquery + " INSERT INTO ad_sale_detail (id_header,id_product,quantity,unit_price,total) " 
                        +"VALUES (SCOPE_IDENTITY()," 
                        + prod.product_id + "," 
                        + prod.quantity_in_sale + ","
                        + prod.product_price + ","
-                       + "100.00)"
+                       + total_items_price + ") "
+
+            query_downgrade_products = " update ad_local_products set quantity = quantity - "
+            + prod.quantity_in_sale +" where id_product = " + prod.product_id 
+            + " and id_local = " + body.local_id + " ";
 
         });
 
-        query = query + subquery + " select 'SUCCESS' [RESULT]";
+        query = query + subquery + query_downgrade_products + " select 'SUCCESS' [RESULT]";
 
         console.log(query);
 
@@ -520,7 +527,6 @@ app.post('/inventapp_save_sale', (req, res) => {
 
 
 });
-
 
 //LOCAL
 app.get('/inventapp_get_local_by_secret', (req, res) => {
