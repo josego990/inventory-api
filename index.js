@@ -597,7 +597,7 @@ app.post('/inventapp_save_sale', (req, res) => {
 
 });
 
-//LOCAL
+//LOCALs
 app.get('/inventapp_get_local_by_secret', (req, res) => {
 
     var local_secret_key = req.query.s_k_l;
@@ -649,7 +649,7 @@ app.get('/inventapp_get_local_by_secret', (req, res) => {
 
     });
 
-//LOCAL
+//USER
 app.get('/inventapp_get_user_by_secret', (req, res) => {
 
     var secret_key = req.query.s_k;
@@ -741,6 +741,59 @@ app.get('/inventapp_get_sales_by_filter', (req, res) => {
 
 });
 
+//GET SALE DETAIL BY ID_SALE
+app.get('/inventapp_get_detail_by_id_sale', (req, res) => {
+
+    var header_id = req.query.h_i;
+
+    var sql = require("mssql");
+
+    // config for your database
+    var config = {
+        user: 'admin',
+        password: 'queremencuentle',
+        server: 'msqlserverexpress.cwz13vhixiyz.us-east-1.rds.amazonaws.com', 
+        database: 'inventory_app',
+        port: 1433
+    };
+
+    sql.close();
+
+    sql.connect(config, function (err) {
+
+        if (err) console.log(err);
+
+        var request = new sql.Request();
+            
+        var query = "select d.id_product,d.quantity,d.unit_price,d.total,p.code_product,p.name_product,p.image_path\
+                    from ad_sale_detail d\
+                    inner join ad_sale_header h\
+                    on h.id = d.id_header\
+                    inner join ca_products p\
+                    on p.id_product = d.id_product\
+                    where h.id =" + header_id;
+                  
+        console.log(query);
+
+        request.query(query, function (err, recordset) {
+            
+            if (err) console.log(err)
+
+            sql.close();
+
+            var myJsonString = JSON.stringify(recordset.recordset);
+            
+            //console.log(recordset.recordset);
+
+            res.status(200).send(myJsonString);
+            
+        });
+
+    });
+
+});
+
+//
 
 //FINALIZAN METODOS DE INVENTORY-------------------------------------------------------------------------------------
 
